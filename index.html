@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Betting Web App</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 10px;
+    }
+    .section { margin: 20px 0; padding: 10px; border: 1px solid #444; border-radius: 10px; }
+    button { margin-top: 10px; padding: 10px; border: none; border-radius: 5px; background: #2196f3; color: white; cursor: pointer; }
+    button.active { background: #4caf50; }
+    input, select { padding: 5px; margin: 5px 0; width: 100%; border-radius: 5px; border: none; }
+  </style>
+</head>
+<body>
+
+<h2 id="balance">ব্যালেন্স: ৳1000</h2>
+
+<div class="section">
+  <h3 id="matchTitle">ম্যাচ সিলেক্ট করুন</h3>
+  <button id="btnTeam1" onclick="selectTeam(1)">Team 1</button>
+  <button id="btnTeam2" onclick="selectTeam(2)">Team 2</button>
+  <p>Profit Multiplier: <span id="multiplier">×1.8</span></p>
+  <input type="number" id="betAmount" placeholder="Amount">
+  <button onclick="confirmBet()">Bet Confirm</button>
+</div>
+
+<div class="section">
+  <h3>Deposit</h3>
+  <select id="depositMethod">
+    <option>bKash</option>
+    <option>Nagad</option>
+  </select>
+  <p>01816395401 এই নাম্বারে সেন্ড মানি করুন।</p>
+  <input type="number" id="depositAmt" placeholder="Deposit Amount">
+  <input type="text" id="depositTrx" placeholder="Transaction ID">
+  <button onclick="submitDeposit()">Send Deposit Request</button>
+</div>
+
+<div class="section">
+  <h3>Withdraw</h3>
+  <input type="text" id="withdrawNum" placeholder="Number">
+  <select id="withdrawMethod">
+    <option>bKash</option>
+    <option>Nagad</option>
+  </select>
+  <input type="number" id="withdrawAmt" placeholder="Withdraw Amount">
+  <button onclick="submitWithdraw()">Withdraw Confirm</button>
+</div>
+
+<div style="position: fixed; bottom: 10px; left: 10px;">
+  <button onclick="toggleAdmin()">R</button>
+</div>
+
+<div id="adminPanel" style="display:none;" class="section">
+  <h3>Admin Panel</h3>
+  <input id="adminMatchTitle" placeholder="ম্যাচ টাইটেল">
+  <input id="adminTeam1" placeholder="Team 1 নাম">
+  <input id="adminTeam2" placeholder="Team 2 নাম">
+  <input id="adminMult1" placeholder="Team 1 গুণফল" type="number">
+  <input id="adminMult2" placeholder="Team 2 গুণফল" type="number">
+  <button onclick="uploadMatch()">Upload Match</button>
+
+  <div id="declareSection"></div>
+
+  <h3>Deposit Requests:</h3>
+  <ul id="depositList"></ul>
+
+  <h3>Withdraw Requests:</h3>
+  <ul id="withdrawList"></ul>
+</div>
+
+<script>
+  let balance = 1000;
+  let selectedTeam = 1;
+  let mult1 = 1.8, mult2 = 2.1;
+  let lastBetAmount = 0;
+  let lastBetTeam = 1;
+  const depositList = [];
+  const withdrawList = [];
+
+  function updateBalance() {
+    document.getElementById('balance').innerText = 'ব্যালেন্স: ৳' + balance;
+  }
+
+  function selectTeam(n) {
+    selectedTeam = n;
+    document.getElementById('btnTeam1').classList.toggle('active', n===1);
+    document.getElementById('btnTeam2').classList.toggle('active', n===2);
+    document.getElementById('multiplier').innerText = '×' + (n===1 ? mult1 : mult2);
+  }
+
+  function confirmBet() {
+    const amt = parseInt(document.getElementById('betAmount').value);
+    if (!amt || amt <=0) return alert('সঠিক এমাউন্ট লিখুন');
+    if (amt > balance) return alert('পর্যাপ্ত ব্যালেন্স নেই');
+    balance -= amt;
+    lastBetAmount = amt;
+    lastBetTeam = selectedTeam;
+    updateBalance();
+    alert('Success! আপনি Team ' + (selectedTeam===1?'1':'2') + ' এ ' + amt + ' টাকা বেট করলেন.');
+    document.getElementById('betAmount').value = '';
+  }
+
+  function submitDeposit() {
+    const method = document.getElementById('depositMethod').value;
+    const amount = document.getElementById('depositAmt').value;
+    const trx = document.getElementById('depositTrx').value;
+    if (!amount || !trx) return alert('সব তথ্য দিন');
+    const text = `Method: ${method}, Amount: ৳${amount}, TRX: ${trx}`;
+    depositList.push(text);
+    updateDepositList();
+    alert('Deposit request sent!');
+    document.getElementById('depositAmt').value = '';
+    document.getElementById('depositTrx').value = '';
+  }
+
+  function updateDepositList() {
+    const ul = document.getElementById('depositList');
+    ul.innerHTML = '';
+    depositList.forEach((item, index) => {
+      const li = document.createElement('li');
+      li.textContent = item + ' ';
+      const btn = document.createElement('button');
+      btn.textContent = 'Approve';
+      btn.onclick = () => {
+        alert('Deposit Approved: ' + item);
+        depositList.splice(index, 1);
+        updateDepositList();
+      };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+  }
+
+  function submitWithdraw() {
+    const number = document.getElementById('withdrawNum').value;
+    const method = document.getElementById('withdrawMethod').value;
+    const amount = document.getElementById('withdrawAmt').value;
+    if (!number || !amount) return alert('সব তথ্য দিন');
+    const text = `Number: ${number}, Method: ${method}, Amount: ৳${amount}`;
+    withdrawList.push(text);
+    updateWithdrawList();
+    alert('Withdraw request sent!');
+    document.getElementById('withdrawNum').value = '';
+    document.getElementById('withdrawAmt').value = '';
+  }
+
+  function updateWithdrawList() {
+    const ul = document.getElementById('withdrawList');
+    ul.innerHTML = '';
+    withdrawList.forEach((item, index) => {
+      const li = document.createElement('li');
+      li.textContent = item + ' ';
+      const btn = document.createElement('button');
+      btn.textContent = 'Approve';
+      btn.onclick = () => {
+        alert('Withdraw Approved: ' + item);
+        withdrawList.splice(index, 1);
+        updateWithdrawList();
+      };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+  }
+
+  function toggleAdmin() {
+    const p = prompt('Enter admin password:');
+    if (p==='rezoan') {
+      document.getElementById('adminPanel').style.display = 'block';
+    } else alert('Wrong password!');
+  }
+
+  function uploadMatch() {
+    const t = document.getElementById('adminMatchTitle').value;
+    const t1n = document.getElementById('adminTeam1').value;
+    const t2n = document.getElementById('adminTeam2').value;
+    const m1 = parseFloat(document.getElementById('adminMult1').value);
+    const m2 = parseFloat(document.getElementById('adminMult2').value);
+    if (!t || !t1n || !t2n || !m1 || !m2) return alert('সব তথ্য পূরণ করুন');
+    document.getElementById('matchTitle').innerText = t;
+    document.getElementById('btnTeam1').innerText = t1n;
+    document.getElementById('btnTeam2').innerText = t2n;
+    mult1 = m1; mult2 = m2;
+    selectTeam(1);
+    document.getElementById('declareSection').innerHTML = `
+      <button onclick="declareWinner(1)"> ${t1n} WIN</button>
+      <button onclick="declareWinner(2)"> ${t2n} WIN</button>
+    `;
+    alert('Match uploaded!');
+  }
+
+  function declareWinner(n) {
+    const winner = n===1 ? document.getElementById('adminTeam1').value : document.getElementById('adminTeam2').value;
+    if (lastBetTeam === n && lastBetAmount > 0) {
+      const profit = lastBetAmount * (n === 1 ? mult1 : mult2);
+      balance += Math.floor(profit);
+      alert(`আপনি জিতেছেন! আপনার লাভ হয়েছে ৳${Math.floor(profit)}।`);
+    } else {
+      alert(`আপনি হেরেছেন! জয়ী টিম: ${winner}`);
+    }
+    updateBalance();
+    lastBetAmount = 0;
+    lastBetTeam = 1;
+    document.getElementById('declareSection').innerHTML = '';
+  }
+
+  updateBalance();
+</script>
+
+</body>
+</html>
